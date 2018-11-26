@@ -11,7 +11,6 @@ const infinityDuration time.Duration = 0x7fffffffffffffff
 //Bucket ...
 type Bucket struct {
 	sync.Mutex
-	clock time.Time
 
 	startTime    time.Time
 	capacity     int64
