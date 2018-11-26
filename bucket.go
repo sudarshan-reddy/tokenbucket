@@ -62,6 +62,10 @@ func (tb *Bucket) Wait(count int64) {
 	}
 }
 
+func (tb *Bucket) ChangeInterval(fillInterval time.Duration) {
+	tb.fillInterval = fillInterval
+}
+
 // Take takes count tokens from the bucket without blocking. It returns
 // the time that the caller should wait until the tokens are actually
 // available.
