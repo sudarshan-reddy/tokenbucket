@@ -62,6 +62,7 @@ func (tb *Bucket) Wait(count int64) {
 	}
 }
 
+//ChangeInterval is used to dynamically alter fill interval midway
 func (tb *Bucket) ChangeInterval(fillInterval time.Duration) {
 	tb.fillInterval = fillInterval
 }
@@ -69,9 +70,6 @@ func (tb *Bucket) ChangeInterval(fillInterval time.Duration) {
 // Take takes count tokens from the bucket without blocking. It returns
 // the time that the caller should wait until the tokens are actually
 // available.
-//
-// Note that if the request is irrevocable - there is no way to return
-// tokens to the bucket once this method commits us to taking them.
 func (tb *Bucket) Take(count int64) time.Duration {
 	tb.Lock()
 	defer tb.Unlock()
