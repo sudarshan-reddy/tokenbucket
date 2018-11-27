@@ -99,10 +99,11 @@ func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.
 		return 0, true
 	}
 
-	//calculate how long to wait for the tokens to be available.
-	endTick := tick + (-availableTokens+tb.tokensToBeAdded-1)/tb.tokensToBeAdded
-	endTime := tb.startTime.Add(time.Duration(endTick) * tb.fillInterval)
-	waitTime := endTime.Sub(now)
+	tickWhenTokensWillBeAvail := tick +
+		(-availableTokens+tb.tokensToBeAdded-1)/tb.tokensToBeAdded
+	timeWhenTokensWillBeAvail := tb.startTime.
+		Add(time.Duration(tickWhenTokensWillBeAvail) * tb.fillInterval)
+	waitTime := timeWhenTokensWillBeAvail.Sub(now)
 	if waitTime > maxWait {
 		return 0, false
 	}
