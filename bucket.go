@@ -55,74 +55,79 @@ func (w *writer) Write(buf []byte) (int, error) {
 
 // Wait takes count tokens from the bucket, waiting until they are
 // available.
-func (tb *Bucket) Wait(count int64) {
-	if d := tb.Take(count); d > 0 {
+func (b *Bucket) Wait(count int64) {
+	if d := b.Take(count); d > 0 {
 		time.Sleep(d)
 	}
 }
 
 //ChangeInterval is used to dynamically alter fill interval midway
-func (tb *Bucket) ChangeInterval(fillInterval time.Duration) {
-	tb.fillInterval = fillInterval
+func (b *Bucket) ChangeInterval(fillInterval time.Duration) {
+	b.fillInterval = fillInterval
 }
 
 // Take takes count tokens from the bucket without blocking. It returns
 // the time that the caller should wait until the tokens are actually
 // available.
-func (tb *Bucket) Take(count int64) time.Duration {
-	tb.Lock()
-	defer tb.Unlock()
-	d, _ := tb.take(time.Now(), count, infinityDuration)
+func (b *Bucket) Take(count int64) time.Duration {
+	b.Lock()
+	defer b.Unlock()
+	d, _ := b.take(time.Now(), count, infinityDuration)
 	return d
 }
 
 // Capacity returns the capacity that the bucket was created with.
-func (tb *Bucket) Capacity() int64 {
-	return tb.capacity
+func (b *Bucket) Capacity() int64 {
+	return b.capacity
 }
 
 // Rate returns the fill rate of the bucket, in tokens per second.
-func (tb *Bucket) Rate() float64 {
-	return 1e9 * float64(tb.tokensToBeAdded) / float64(tb.fillInterval)
+func (b *Bucket) Rate() float64 {
+	return 1e9 * float64(b.tokensToBeAdded) / float64(b.fillInterval)
 }
 
-func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.Duration, bool) {
+func (b *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.Duration, bool) {
 	if count <= 0 {
 		return 0, true
 	}
 
-	tick := tb.currentTick(now)
-	tb.adjustAvailableTokens(tick)
-	availableTokens := tb.availableTokens - count
+	tick := b.currentTick(now)
+	b.adjustAvailableTokens(tick)
+	availableTokens := b.availableTokens - count
 	if availableTokens >= 0 {
-		tb.availableTokens = availableTokens
+		b.availableTokens = availableTokens
 		return 0, true
 	}
 
-	tickWhenTokensWillBeAvail := tick +
-		(-availableTokens+tb.tokensToBeAdded-1)/tb.tokensToBeAdded
-	timeWhenTokensWillBeAvail := tb.startTime.
-		Add(time.Duration(tickWhenTokensWillBeAvail) * tb.fillInterval)
-	waitTime := timeWhenTokensWillBeAvail.Sub(now)
+	waitTime := b.computeWaitTime(now, tick, availableTokens)
 	if waitTime > maxWait {
 		return 0, false
 	}
-	tb.availableTokens = availableTokens
+	b.availableTokens = availableTokens
 	return waitTime, true
 }
 
-func (tb *Bucket) currentTick(now time.Time) int64 {
-	return int64(now.Sub(tb.startTime) / tb.fillInterval)
+func (b *Bucket) currentTick(now time.Time) int64 {
+	return int64(now.Sub(b.startTime) / b.fillInterval)
 }
 
-func (tb *Bucket) adjustAvailableTokens(tick int64) {
-	if tb.availableTokens >= tb.capacity {
+func (b *Bucket) computeWaitTime(now time.Time, tick int64,
+	availableTokens int64) time.Duration {
+	tickWhenTokensWillBeAvail := tick +
+		(-availableTokens+b.tokensToBeAdded-1)/b.tokensToBeAdded
+	timeWhenTokensWillBeAvail := b.startTime.
+		Add(time.Duration(tickWhenTokensWillBeAvail) * b.fillInterval)
+	return timeWhenTokensWillBeAvail.Sub(now)
+}
+
+func (b *Bucket) adjustAvailableTokens(tick int64) {
+	if b.availableTokens >= b.capacity {
 		return
 	}
-	tb.availableTokens += (tick - tb.latestTick) * tb.tokensToBeAdded
-	if tb.availableTokens > tb.capacity {
-		tb.availableTokens = tb.capacity
+	b.availableTokens += (tick - b.latestTick) * b.tokensToBeAdded
+	if b.availableTokens > b.capacity {
+		b.availableTokens = b.capacity
 	}
-	tb.latestTick = tick
+	b.latestTick = tick
 	return
 }
