@@ -76,16 +76,6 @@ func (b *Bucket) Take(count int64) time.Duration {
 	return d
 }
 
-// Capacity returns the capacity that the bucket was created with.
-func (b *Bucket) Capacity() int64 {
-	return b.capacity
-}
-
-// Rate returns the fill rate of the bucket, in tokens per second.
-func (b *Bucket) Rate() float64 {
-	return 1e9 * float64(b.tokensToBeAdded) / float64(b.fillInterval)
-}
-
 func (b *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.Duration, bool) {
 	if count <= 0 {
 		return 0, true
